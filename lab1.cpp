@@ -123,7 +123,22 @@ question4_cpp(n)
  * Hint: Use a loop!
  */
 // [[Rcpp::export]]
-
+double question5_cpp(int n, int t_max){
+  NumericVector prevA(n,0.0);
+  NumericVector prevL(n,0.0);
+  NumericVector L;
+  NumericVector A;
+  for(int i=0; i<t_max; i++){
+    //none of this will work in standard C++; relies on Rcpp syntatic sugar
+    L = prevA + prevL + rnorm(n,0.0,1.0);
+    A = rexpit_cpp(-1.5 * L + prevA);
+    prevL = L;
+    prevA = A;
+  }
+  double out;
+  out = mean(L);
+  return(out);
+}
 
 /***R
 set.seed(1)
@@ -138,7 +153,12 @@ for (t in 1:30) {
 }
 mean(L)
 
-
-
-
+set.seed(1)
+question5_cpp(n=1e6,t_max=30)
 */
+
+
+/*
+ * 3: Simulating the data
+ * Data Structure and running example for this course
+ */
