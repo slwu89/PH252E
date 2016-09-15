@@ -571,17 +571,63 @@ DataFrame st_sweep_hazard(){
   NumericVector s_vec;
   NumericVector t_vec;
   NumericVector EYa_vec;
+  NumericVector hazard_vec;
   for(int s=0; s<5; s++){
+    double prevEYa = 0.0;
     for(int t=1; t<5; t++){
       Rcout << "on iteration s: " << s << ", t: " << t << std::endl;
       //make abar
       NumericVector abar = make_abar(s);
       double EYa = GenerateData_abar_tmax_cpp(1E6,t,abar);
+      Rcout << "EYa: " << EYa << ", prevEYa: " << prevEYa << std::endl;
+      double hazard = (EYa - prevEYa) / (1 - prevEYa);
+      hazard_vec.push_back(hazard);
       s_vec.push_back(s);
       t_vec.push_back(t);
       EYa_vec.push_back(EYa);
+      prevEYa = EYa;
     }
   }
   
-  return(DataFrame::create(_["t"]=t_vec,_["s"]=s_vec,_["EYa"]=EYa_vec));
+  return(DataFrame::create(_["t"]=t_vec,_["s"]=s_vec,_["EYa"]=EYa_vec,_["hazard"]=hazard_vec));
 }
+
+/***R
+set.seed(1)
+df <- NULL
+for (s in 0:4) {
+  prev.EYa <- 0 
+  for (t in 1:4) {
+    print(paste0("on iteration s: ",s,", t: ",t))
+    abar <- c(rep(0, s), rep(1, 4 - s))
+    EYa <- GenerateData(n = 1e6, t, abar)
+    print(paste0("EYa: ",EYa,", prev.EYa: ",prev.EYa))
+    hazard <- (EYa - prev.EYa) / (1 - prev.EYa)
+    df <- rbind(df, data.frame(t, s, EYa, hazard))
+    prev.EYa <- EYa
+  }
+}
+df
+
+set.seed(1)
+system.time(df_cpp <- st_sweep_hazard())
+*/
+
+
+/*
+ * 5.3: Fitting the MSM
+ */
+/***R
+#probably doesn't make sense to re-implement this in C++, for sanity and time
+m.hazard <- glm(hazard ~ pmax(t - s, 0) + t, family = binomial(), data = df)
+coef(m.hazard)
+*/
+
+
+/*
+ * 5.4: Computing the projections
+ */
+/***R
+pred.hazard <- predict(m.hazard, type = "response")
+pred.hazard
+*/
